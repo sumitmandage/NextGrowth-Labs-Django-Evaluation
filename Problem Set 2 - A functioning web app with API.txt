@@ -1,0 +1,143 @@
+1. Models (models.py)
+
+from django.db import models
+from django.contrib.auth.models import User
+
+class App(models.Model):
+    name = models.CharField(max_length=100)
+    points = models.IntegerField()
+
+class UserProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    points = models.IntegerField(default=0)
+    tasks_completed = models.IntegerField(default=0)
+    screenshot = models.ImageField(upload_to='screenshots/', blank=True, null=True)
+
+===========================================
+
+2. API Endpoints (views.py)
+
+from rest_framework import viewsets
+from .models import App
+from .serializers import AppSerializer
+
+class AppViewSet(viewsets.ModelViewSet):
+    queryset = App.objects.all()
+    serializer_class = AppSerializer
+
+
+===========================================
+
+3. Serializers (serializers.py)
+
+from rest_framework import serializers
+from .models import App
+
+class AppSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = App
+        fields = '__all__'
+
+
+===========================================
+
+4. Admin Interface (admin.py)
+
+from django.contrib import admin
+from .models import App
+
+admin.site.register(App)
+
+
+===========================================
+
+5. User Facing Views (views.py)
+
+from django.shortcuts import render
+from .models import UserProfile
+from .forms import ScreenshotUploadForm
+
+def user_profile(request):
+    user_profile = UserProfile.objects.get(user=request.user)
+    if request.method == 'POST':
+        form = ScreenshotUploadForm(request.POST, request.FILES)
+        if form.is_valid():
+            user_profile.screenshot = form.cleaned_data['screenshot']
+            user_profile.save()
+    else:
+        form = ScreenshotUploadForm()
+    return render(request, 'user_profile.html', {'user_profile': user_profile, 'form': form})
+
+
+===========================================
+
+6. Authentication (urls.py)
+
+from django.urls import path, include
+from rest_framework import routers
+from .views import AppViewSet
+
+router = routers.DefaultRouter()
+router.register(r'apps', AppViewSet)
+
+urlpatterns = [
+    path('', include(router.urls)),
+    # Add authentication URLs (signup, login, logout, etc.)
+]
+
+
+===========================================
+
+7. Templates (user_profile.html)
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>User Profile</title>
+</head>
+<body>
+    <h1>Welcome {{ user_profile.user.username }}</h1>
+    <p>Points Earned: {{ user_profile.points }}</p>
+    <p>Tasks Completed: {{ user_profile.tasks_completed }}</p>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Upload Screenshot</button>
+    </form>
+</body>
+</html>
+
+
+===========================================
+
+8. Forms (forms.py)
+
+from django import forms
+from .models import UserProfile
+
+class ScreenshotUploadForm(forms.ModelForm):
+    class Meta:
+        model = UserProfile
+        fields = ['screenshot']
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
